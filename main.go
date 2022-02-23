@@ -19,7 +19,8 @@ func createInfraResources() {
 	region := os.Getenv("REGION")
 	clusterName := os.Getenv("CLUSTER_NAME")
 	infraID := os.Getenv("INFRA_ID")
-	awsCreds := os.Getenv("AWS_CREDS")
+	awsAccessKeyID := os.Getenv("AWS_ACCESS_KEY_ID")
+	awsSecretKey := os.Getenv("AWS_SECRET_KEY")
 	baseDomain := os.Getenv("BASE_DOMAIN")
 
 	log.Info("***** Create AWS infrastructure resources for a cluster")
@@ -28,7 +29,9 @@ func createInfraResources() {
 		Region: 			region,		
 		Name:   			clusterName,	// A name for the cluster
 		InfraID:			infraID,		// ID with which to tag resources
-		AWSCredentialsFile: awsCreds,		// Path to file containing AWS credentials
+		AWSKey:				awsAccessKeyID,
+		AWSSecretKey:		awsSecretKey,
+		AWSCredentialsFile:	"",
 		BaseDomain:			baseDomain,
 	}
 
@@ -61,7 +64,8 @@ func createIAMResources() {
 	oidcBucketName := os.Getenv("OIDC_BUCKET_NAME")
 	oidcBucketRegion := os.Getenv("OIDC_BUCKET_REGION")
 	infraID := os.Getenv("INFRA_ID")
-	awsCreds := os.Getenv("AWS_CREDS")
+	awsAccessKeyID := os.Getenv("AWS_ACCESS_KEY_ID")
+	awsSecretKey := os.Getenv("AWS_SECRET_KEY")
 	publicZoneID := createInfraOutput.PublicZoneID
 	privateZoneID := createInfraOutput.PrivateZoneID
 	localZoneID := createInfraOutput.LocalZoneID
@@ -73,7 +77,9 @@ func createIAMResources() {
 		OIDCStorageProviderS3BucketName:	oidcBucketName,		// The name of the bucket in which the OIDC discovery document is stored
 		OIDCStorageProviderS3Region: 		oidcBucketRegion,	// The region of the bucket in which the OIDC discovery document is stored
 		InfraID:							infraID,			// Infrastructure ID to use for AWS resources. It is used to identify the IAM resources associated with the hosted cluster.
-		AWSCredentialsFile: 				awsCreds,			// Path to file containing AWS credentials
+		AWSCredentialsFile:					"",
+		AWSKey:								awsAccessKeyID,
+		AWSSecretKey:						awsSecretKey,	
 		PublicZoneID:						publicZoneID,		// The id of the cluster's public route53 zone
 		PrivateZoneID:						privateZoneID,		// The id of the cluster's private route53 zone
 		LocalZoneID: 						localZoneID,		// The id of the cluster's local route53 zone

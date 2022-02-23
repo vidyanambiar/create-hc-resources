@@ -1,4 +1,5 @@
 .vscode/
+.DS_Store
 create-hc-resources
 *-output.js
 env.list
