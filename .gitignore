@@ -1,3 +1,4 @@
 .vscode/
 create-hc-resources
-*-output.json
+*-output.js
+env.list

@@ -9,7 +9,10 @@ replace (
 	sigs.k8s.io/cluster-api-provider-kubevirt => github.com/openshift/cluster-api-provider-kubevirt v0.0.0-20211223062810-ef64d5ff1cde
 )
 
-require github.com/openshift/hypershift v0.0.0-20220218003034-93ea4702f952
+require (
+	github.com/openshift/hypershift v0.0.0-20220218003034-93ea4702f952
+	github.com/sirupsen/logrus v1.8.1
+)
 
 require (
 	github.com/Azure/azure-sdk-for-go v61.4.0+incompatible // indirect

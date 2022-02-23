@@ -24,3 +24,10 @@ export OIDC_BUCKET_NAME=...
 export OIDC_BUCKET_REGION=...
 ```
 
+```
+// build
+go build
+
+// run go binary
+create-hc-resources
+```

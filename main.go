@@ -8,6 +8,7 @@ import (
 	"os"
 
 	cmd "github.com/openshift/hypershift/cmd/infra/aws"
+	log "github.com/sirupsen/logrus"
 )
 
 var createInfraOutput *cmd.CreateInfraOutput
@@ -21,7 +22,7 @@ func createInfraResources() {
 	awsCreds := os.Getenv("AWS_CREDS")
 	baseDomain := os.Getenv("BASE_DOMAIN")
 
-	fmt.Printf("***** Create AWS infrastructure resources for a cluster (%v)", clusterName)
+	log.Info("***** Create AWS infrastructure resources for a cluster")
 
 	createInfraOpts := cmd.CreateInfraOptions{
 		Region: 			region,		
@@ -31,14 +32,21 @@ func createInfraResources() {
 		BaseDomain:			baseDomain,
 	}
 
+	log.WithFields(log.Fields{
+		"Region":         	createInfraOpts.Region,
+		"Name":             createInfraOpts.Name,
+		"InfraID":          createInfraOpts.InfraID,
+		"BaseDomain":      	createInfraOpts.BaseDomain,
+	}).Info("Configuration Values for Infra:")	
+
 	var err error
 	
 	createInfraOutput, err = createInfraOpts.CreateInfra(context.TODO())
 
 	if err != nil {
-		fmt.Println("Error creating infra!", err)
+		log.WithFields(log.Fields{"error": err}).Fatal("Error creating infra!")
 	} else {
-		fmt.Println("infra output JSON", createInfraOutput)
+		log.WithFields(log.Fields{"result": createInfraOutput}).Info("Infra Output JSON")
 
 		file, _ := json.MarshalIndent(createInfraOutput, "", " ")
 	 
@@ -58,9 +66,7 @@ func createIAMResources() {
 	privateZoneID := createInfraOutput.PrivateZoneID
 	localZoneID := createInfraOutput.LocalZoneID
 
-	fmt.Printf("***** Create AWS IAM resources")
-
-	fmt.Printf("Using publicZoneID: %v, publicZoneID: %v, localZoneID: %v", publicZoneID, privateZoneID, localZoneID)
+	log.Info("***** Create AWS IAM resources")
 
 	createIAMOpts := cmd.CreateIAMOptions{
 		Region: 							region,				// Region where cluster infra should be created
@@ -73,12 +79,22 @@ func createIAMResources() {
 		LocalZoneID: 						localZoneID,		// The id of the cluster's local route53 zone
 	}
 
+	log.WithFields(log.Fields{
+		"Region":         						createIAMOpts.Region,
+		"InfraID":								createIAMOpts.InfraID,
+		"OIDCStorageProviderS3BucketName":      createIAMOpts.OIDCStorageProviderS3BucketName,
+		"OIDCStorageProviderS3Region":          createIAMOpts.OIDCStorageProviderS3Region,																	
+		"PublicZoneID":      					createIAMOpts.PublicZoneID,
+		"PrivateZoneID":						createIAMOpts.PrivateZoneID,
+		"LocalZoneID":							createIAMOpts.LocalZoneID,
+	}).Info("Configuration Values for IAM:")
+
 	result, err := createIAMOpts.CreateIAM(context.TODO(), nil)
 
 	if err != nil {
-		fmt.Println("Error creating IAM!", err)
+		log.WithFields(log.Fields{"error": err}).Fatal("Error creating IAM!")
 	} else {
-		fmt.Println("IAM Output JSON", result)
+		log.WithFields(log.Fields{"result": result}).Info("IAM Output JSON")
 
 		file, _ := json.MarshalIndent(result, "", " ")
 	 
