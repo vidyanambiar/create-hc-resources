@@ -10,6 +10,7 @@ replace (
 )
 
 require (
+	github.com/aws/aws-lambda-go v1.27.0
 	github.com/openshift/hypershift v0.0.0-20220218003034-93ea4702f952
 	github.com/sirupsen/logrus v1.8.1
 )
