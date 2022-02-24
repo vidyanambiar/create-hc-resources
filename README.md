@@ -26,6 +26,18 @@ The code for the CDK stack to deploy the lambda is located in the `/hc-resources
 }
 ```
 
+#### Output:
+```
+{
+  "infraOutput": {
+      // Infra output ARNs from hypershift's create infra aws
+  },
+  "iamOutput": {
+      // IAM output ARNs from hypershift's create infra aws
+  }
+}
+```
+
 #### Useful commands
 *Run from within the `/hc-resources-cdk` folder*
 
