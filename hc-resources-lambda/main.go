@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 
 	cmd "github.com/openshift/hypershift/cmd/infra/aws"
 	log "github.com/sirupsen/logrus"
@@ -66,30 +65,19 @@ func createInfraResources(createResourcesEvent CreateResourcesEvent) (*cmd.Creat
 
 // Create AWS IAM resources for a hosted cluster
 func createIAMResources(createResourcesEvent CreateResourcesEvent) (*cmd.CreateIAMOutput, error) {
-	// Get values for IAM options from environment variables
-	region := os.Getenv("REGION")
-	oidcBucketName := os.Getenv("OIDC_BUCKET_NAME")
-	oidcBucketRegion := os.Getenv("OIDC_BUCKET_REGION")
-	infraID := os.Getenv("INFRA_ID")
-	awsAccessKeyID := os.Getenv("AWS_ACCESS_KEY_ID")
-	awsSecretKey := os.Getenv("AWS_SECRET_KEY")
-	publicZoneID := createInfraOutput.PublicZoneID
-	privateZoneID := createInfraOutput.PrivateZoneID
-	localZoneID := createInfraOutput.LocalZoneID
-
 	log.Info("***** Create AWS IAM resources")
 
 	createIAMOpts := cmd.CreateIAMOptions{
-		Region: 							region,				// Region where cluster infra should be created
-		OIDCStorageProviderS3BucketName:	oidcBucketName,		// The name of the bucket in which the OIDC discovery document is stored
-		OIDCStorageProviderS3Region: 		oidcBucketRegion,	// The region of the bucket in which the OIDC discovery document is stored
-		InfraID:							infraID,			// Infrastructure ID to use for AWS resources. It is used to identify the IAM resources associated with the hosted cluster.
+		Region: 							createResourcesEvent.Region,
+		OIDCStorageProviderS3BucketName:	createResourcesEvent.OIDCStorageProviderS3BucketName,
+		OIDCStorageProviderS3Region: 		createResourcesEvent.OIDCStorageProviderS3Region,
+		InfraID:							createResourcesEvent.InfraID,
 		AWSCredentialsFile:					"",
-		AWSKey:								awsAccessKeyID,
-		AWSSecretKey:						awsSecretKey,	
-		PublicZoneID:						publicZoneID,		// The id of the cluster's public route53 zone
-		PrivateZoneID:						privateZoneID,		// The id of the cluster's private route53 zone
-		LocalZoneID: 						localZoneID,		// The id of the cluster's local route53 zone
+		AWSKey:								createResourcesEvent.AWSKey,
+		AWSSecretKey:						createResourcesEvent.AWSSecretKey,
+		PublicZoneID:						createInfraOutput.PublicZoneID,		// The id of the cluster's public route53 zone
+		PrivateZoneID:						createInfraOutput.PrivateZoneID,	// The id of the cluster's private route53 zone
+		LocalZoneID: 						createInfraOutput.LocalZoneID,		// The id of the cluster's local route53 zone
 	}
 
 	log.WithFields(log.Fields{
