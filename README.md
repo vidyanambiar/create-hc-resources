@@ -25,3 +25,8 @@ The code for the CDK stack to deploy the lambda is located in the `/hc-resources
   "oidcBucketRegion": "value",  // The region of the bucket in which the OIDC discovery document is stored
 }
 ```
+
+#### Useful commands
+`cdk synth` causes the resources defined in the app (lambda function in this case) to be translated into an AWS CloudFormation template
+`cdk bootstrap` bootstrap cdk components into your AWS account/region
+`cdk deploy` deploys this stack to your default AWS account/region
