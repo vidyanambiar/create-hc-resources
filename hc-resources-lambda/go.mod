@@ -1,4 +1,4 @@
-module github.com/vidyanambiar/create-hc-resources
+module github.com/stolostron/create-hc-resources
 
 go 1.17
 
