@@ -22,18 +22,14 @@ export class HcResourcesLambda extends core.Construct {
 
         // Payload for Lambda
         const payload: string = JSON.stringify({
-            params: {
-                config: {
-                    region: process.env.REGION,
-                    infraID: process.env.INFRA_ID,
-                    awsAccessKeyID: process.env.AWS_ACCESS_KEY_ID,
-                    awsSecretKey: process.env.AWS_SECRET_KEY,
-                    name: process.env.CLUSTER_NAME,
-                    baseDomain: process.env.BASE_DOMAIN,
-                    oidcBucketName: process.env.OIDC_BUCKET_NAME,
-                    oidcBucketRegion: process.env.OIDC_BUCKET_REGION
-                }
-            }
+            region: process.env.REGION,
+            infraID: process.env.INFRA_ID,
+            awsAccessKeyID: process.env.AWS_ACCESS_KEY_ID,
+            awsSecretKey: process.env.AWS_SECRET_KEY,
+            name: process.env.CLUSTER_NAME,
+            baseDomain: process.env.BASE_DOMAIN,
+            oidcBucketName: process.env.OIDC_BUCKET_NAME,
+            oidcBucketRegion: process.env.OIDC_BUCKET_REGION
         })
 
         const payloadHashPrefix = createHash('md5').update(payload).digest('hex').substring(0, 6)
@@ -54,13 +50,14 @@ export class HcResourcesLambda extends core.Construct {
           })
         customResourceFnRole.addToPolicy(
             new PolicyStatement({
-                resources: [`arn:aws:lambda:${stack.region}:${stack.account}:function:*-ResInit${stack.stackName}`],
+                resources: [`arn:aws:lambda:${stack.region}:${stack.account}:function:*${stack.stackName}*`],
                 actions: ['lambda:InvokeFunction']
             })
         )        
 
         this.customResource = new AwsCustomResource(this, 'AwsCustomResource', {
             policy: AwsCustomResourcePolicy.fromSdkCalls({ resources: AwsCustomResourcePolicy.ANY_RESOURCE }),
+            onCreate: sdkCall,
             onUpdate: sdkCall,
             timeout: core.Duration.minutes(10),
             role: customResourceFnRole
