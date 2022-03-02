@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 
 	cmd "github.com/openshift/hypershift/cmd/infra/aws"
 	log "github.com/sirupsen/logrus"
@@ -13,8 +14,6 @@ import (
 type CreateResourcesEvent struct {
 	Region             string	`json:"region"`				// Region where cluster infra should be created
 	InfraID            string	`json:"infraID"`			// Infrastructure ID to use for AWS resources
-	AWSKey             string	`json:"awsAccessKeyID"`		// AWS Access Key ID for account to create resources in
-	AWSSecretKey       string	`json:"awsSecretKey"`		// AWS Secret Key for account to create resources in
 	Name               string	`json:"name"`				// A name for the hosted cluster
 	BaseDomain         string	`json:"baseDomain"`			// The ingress base domain for the cluster
 	OIDCStorageProviderS3BucketName string	`json:"oidcBucketName"`		// The name of the bucket in which the OIDC discovery document is stored
@@ -37,8 +36,8 @@ func createInfraResources(createResourcesEvent CreateResourcesEvent) (*cmd.Creat
 		Region: 			createResourcesEvent.Region,		
 		Name:   			createResourcesEvent.Name,
 		InfraID:			createResourcesEvent.InfraID,
-		AWSKey:				createResourcesEvent.AWSKey,
-		AWSSecretKey:		createResourcesEvent.AWSSecretKey,
+		AWSKey:				os.Getenv("awsAccessKeyID"),
+		AWSSecretKey:		os.Getenv("awsSecretKey"),
 		AWSCredentialsFile:	"",
 		BaseDomain:			createResourcesEvent.BaseDomain,
 	}
@@ -73,8 +72,8 @@ func createIAMResources(createResourcesEvent CreateResourcesEvent) (*cmd.CreateI
 		OIDCStorageProviderS3Region: 		createResourcesEvent.OIDCStorageProviderS3Region,
 		InfraID:							createResourcesEvent.InfraID,
 		AWSCredentialsFile:					"",
-		AWSKey:								createResourcesEvent.AWSKey,
-		AWSSecretKey:						createResourcesEvent.AWSSecretKey,
+		AWSKey:								os.Getenv("awsAccessKeyID"),
+		AWSSecretKey:						os.Getenv("awsSecretKey"),
 		PublicZoneID:						createInfraOutput.PublicZoneID,		// The id of the cluster's public route53 zone
 		PrivateZoneID:						createInfraOutput.PrivateZoneID,	// The id of the cluster's private route53 zone
 		LocalZoneID: 						createInfraOutput.LocalZoneID,		// The id of the cluster's local route53 zone
@@ -103,12 +102,11 @@ func createIAMResources(createResourcesEvent CreateResourcesEvent) (*cmd.CreateI
 
 // Lambda event handler
 func HandleRequest(ctx context.Context, createResourcesEvent CreateResourcesEvent) (ResourcesResponse, error) {
-	// Validate event attributes
-	if (createResourcesEvent.AWSKey == "") {
+	if _, ok := os.LookupEnv("awsAccessKeyID"); !ok {
 		return ResourcesResponse{}, fmt.Errorf("missing AWS access key")
 	}
 	
-	if (createResourcesEvent.AWSSecretKey == "") {
+	if _, ok := os.LookupEnv("awsSecretKey"); !ok {
 		return ResourcesResponse{}, fmt.Errorf("missing AWS secret Key")
 	}
 	

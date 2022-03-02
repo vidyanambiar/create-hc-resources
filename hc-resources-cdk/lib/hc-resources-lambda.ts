@@ -4,6 +4,7 @@ import * as core from '@aws-cdk/core';
 import { AwsCustomResource, AwsCustomResourcePolicy, AwsSdkCall, PhysicalResourceId } from '@aws-cdk/custom-resources'
 import { PolicyStatement, Role, ServicePrincipal } from '@aws-cdk/aws-iam'
 import { createHash } from 'crypto'
+import { CfnParameter } from '@aws-cdk/core';
 
 export class HcResourcesLambda extends core.Construct {
     public readonly response: string
@@ -13,23 +14,57 @@ export class HcResourcesLambda extends core.Construct {
     constructor(scope: core.Construct, id: string) {
         super(scope, id);
 
+        const stack = core.Stack.of(this)
+
+        // Parameters for the lambda function
+        const region = new CfnParameter(this, "region", {
+            type: "String",
+            description: "The region where cluster infra should be created"});
+        const infraID = new CfnParameter(this, "infraID", {
+            type: "String",
+            description: "Infrastructure ID to use for AWS resources"}); 
+        const awsAccessKeyID = new CfnParameter(this, "awsAccessKeyID", {
+            type: "String",
+            description: "AWS Access Key ID for account to create resources in"});
+        const awsSecretKey = new CfnParameter(this, "awsSecretKey", {
+            type: "String",
+            description: "AWS Secret Key for account to create resources in"});
+        const name = new CfnParameter(this, "name", {
+            type: "String",
+            description: "A name for the hosted cluster"}); 
+        const baseDomain = new CfnParameter(this, "baseDomain", {
+            type: "String",
+            description: "The ingress base domain for the cluster"});
+        const oidcBucketName = new CfnParameter(this, "oidcBucketName", {
+            type: "String",
+            description: "The name of the bucket in which the OIDC discovery document is stored"}); 
+        const oidcBucketRegion = new CfnParameter(this, "oidcBucketRegion", {
+            type: "String",
+            description: "The region of the bucket in which the OIDC discovery document is stored"});             
+
         // Build the code and create the lambda
         const lambdaFn = new lambda.GoFunction(this, 'main', {
             entry: path.join(__dirname, '../../hc-resources-lambda'),
+            environment: {
+                region: region.valueAsString,
+                infraID: infraID.valueAsString,
+                name: name.valueAsString,
+                baseDomain: baseDomain.valueAsString,
+                oidcBucketName: oidcBucketName.valueAsString,
+                oidcBucketRegion: oidcBucketRegion.valueAsString,
+                awsAccessKeyID: awsAccessKeyID.valueAsString,
+                infawsSecretKeyraID: awsSecretKey.valueAsString,                                                
+              },            
         });
 
-        const stack = core.Stack.of(this)
-
-        // Payload for Lambda
+        // Payload
         const payload: string = JSON.stringify({
-            region: process.env.REGION,
-            infraID: process.env.INFRA_ID,
-            awsAccessKeyID: process.env.AWS_ACCESS_KEY_ID,
-            awsSecretKey: process.env.AWS_SECRET_KEY,
-            name: process.env.CLUSTER_NAME,
-            baseDomain: process.env.BASE_DOMAIN,
-            oidcBucketName: process.env.OIDC_BUCKET_NAME,
-            oidcBucketRegion: process.env.OIDC_BUCKET_REGION
+            region: region.valueAsString,
+            infraID: infraID.valueAsString,
+            name: name.valueAsString,
+            baseDomain: baseDomain.valueAsString,
+            oidcBucketName: oidcBucketName.valueAsString,
+            oidcBucketRegion: oidcBucketRegion.valueAsString,
         })
 
         const payloadHashPrefix = createHash('md5').update(payload).digest('hex').substring(0, 6)
@@ -39,7 +74,6 @@ export class HcResourcesLambda extends core.Construct {
             action: 'invoke',
             parameters: {
               FunctionName: lambdaFn.functionName,
-              Payload: payload
             },
             physicalResourceId: PhysicalResourceId.of(`${id}-AwsSdkCall-${lambdaFn.currentVersion.version + payloadHashPrefix}`)
           }
