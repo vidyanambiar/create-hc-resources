@@ -11,10 +11,6 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
-type CreateResourcesEvent struct {
-	Name               string	`json:"name"`				// A name for the hosted cluster
-}
-
 // The response is made up of outputs from the AWS infra and IAM hypershift commands
 type ResourcesResponse struct {
 	InfraOutput *cmd.CreateInfraOutput	`json:"infraOutput"`
@@ -24,12 +20,12 @@ type ResourcesResponse struct {
 var createInfraOutput *cmd.CreateInfraOutput
 
 // Create AWS infra resources for a hosted cluster
-func createInfraResources(createResourcesEvent CreateResourcesEvent) (*cmd.CreateInfraOutput, error) {
+func createInfraResources() (*cmd.CreateInfraOutput, error) {
 	log.Info("***** Create AWS infrastructure resources for a cluster")
 
 	createInfraOpts := cmd.CreateInfraOptions{
 		Region: 			os.Getenv("region"),		
-		Name:   			createResourcesEvent.Name,
+		Name:   			os.Getenv("name"),
 		InfraID:			os.Getenv("infraID"),
 		AWSKey:				os.Getenv("awsAccessKeyID"),
 		AWSSecretKey:		os.Getenv("awsSecretKey"),
@@ -58,7 +54,7 @@ func createInfraResources(createResourcesEvent CreateResourcesEvent) (*cmd.Creat
 }
 
 // Create AWS IAM resources for a hosted cluster
-func createIAMResources(createResourcesEvent CreateResourcesEvent) (*cmd.CreateIAMOutput, error) {
+func createIAMResources() (*cmd.CreateIAMOutput, error) {
 	log.Info("***** Create AWS IAM resources")
 
 	createIAMOpts := cmd.CreateIAMOptions{
@@ -96,7 +92,7 @@ func createIAMResources(createResourcesEvent CreateResourcesEvent) (*cmd.CreateI
 }
 
 // Lambda event handler
-func HandleRequest(ctx context.Context, createResourcesEvent CreateResourcesEvent) (ResourcesResponse, error) {
+func HandleRequest(ctx context.Context) (ResourcesResponse, error) {
 	// Validate event attributes
 	if _, ok := os.LookupEnv("awsAccessKeyID"); !ok {
 		return ResourcesResponse{}, fmt.Errorf("missing AWS access key")
@@ -122,12 +118,12 @@ func HandleRequest(ctx context.Context, createResourcesEvent CreateResourcesEven
 		return ResourcesResponse{}, fmt.Errorf("missing oidcBucketRegion")
 	}
 
-	if (createResourcesEvent.Name == "") {
+	if _, ok := os.LookupEnv("name"); !ok {
 		return ResourcesResponse{}, fmt.Errorf("missing cluster name")
 	}		
 	
 	// Note: infra must be created first as values from the infra output will be used for creating IAM resources
-	createInfraOutput, err := createInfraResources(createResourcesEvent)
+	createInfraOutput, err := createInfraResources()
 
 	outputResponse := ResourcesResponse{}
 
@@ -137,7 +133,7 @@ func HandleRequest(ctx context.Context, createResourcesEvent CreateResourcesEven
 		outputResponse.InfraOutput = createInfraOutput
 	}
 
-	createIAMOutput, err := createIAMResources(createResourcesEvent)
+	createIAMOutput, err := createIAMResources()
 
 	if err != nil {
 		return outputResponse, err

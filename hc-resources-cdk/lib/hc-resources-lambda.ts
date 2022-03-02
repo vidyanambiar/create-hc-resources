@@ -17,22 +17,29 @@ export class HcResourcesLambda extends core.Construct {
         const lambdaFn = new lambda.GoFunction(this, 'main', {
             entry: path.join(__dirname, '../../hc-resources-lambda'),
             timeout: core.Duration.seconds(60),
+            functionName: "CreateHCResources",
             environment: {
                 awsAccessKeyID: String(process.env.AWS_ACCESS_KEY_ID),
                 awsSecretKey: String(process.env.AWS_SECRET_KEY),
+                name: String(process.env.CLUSTER_NAME),
                 region: String(process.env.REGION),
                 infraID: String(process.env.INFRA_ID),
                 baseDomain: String(process.env.BASE_DOMAIN),
                 oidcBucketName: String(process.env.OIDC_BUCKET_NAME),
-                oidcBucketRegion: String(process.env.OIDC_BUCKET_REGION)                
+                oidcBucketRegion: String(process.env.OIDC_BUCKET_REGION)           
             }            
         });
 
         const stack = core.Stack.of(this)
 
-        // Payload for Lambda
+        // Payload
         const payload: string = JSON.stringify({
-            name: process.env.CLUSTER_NAME
+            name: process.env.CLUSTER_NAME,
+            region: process.env.REGION,
+            infraID: process.env.INFRA_ID,
+            baseDomain: process.env.BASE_DOMAIN,
+            oidcBucketName: process.env.OIDC_BUCKET_NAME,
+            oidcBucketRegion: process.env.OIDC_BUCKET_REGION  
         })
 
         const payloadHashPrefix = createHash('md5').update(payload).digest('hex').substring(0, 6)
@@ -41,8 +48,7 @@ export class HcResourcesLambda extends core.Construct {
             service: 'Lambda',
             action: 'invoke',
             parameters: {
-              FunctionName: lambdaFn.functionName,
-              Payload: payload
+              FunctionName: lambdaFn.functionName
             },
             physicalResourceId: PhysicalResourceId.of(`${id}-AwsSdkCall-${lambdaFn.currentVersion.version + payloadHashPrefix}`)
           }
@@ -53,7 +59,7 @@ export class HcResourcesLambda extends core.Construct {
           })
         customResourceFnRole.addToPolicy(
             new PolicyStatement({
-                resources: [`arn:aws:lambda:${stack.region}:${stack.account}:function:*${stack.stackName}*`],
+                resources: [`arn:aws:lambda:${stack.region}:${stack.account}:function:CreateHCResources*`],
                 actions: ['lambda:InvokeFunction']
             })
         )        
