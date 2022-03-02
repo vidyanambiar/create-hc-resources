@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 
 	cmd "github.com/openshift/hypershift/cmd/infra/aws"
 	log "github.com/sirupsen/logrus"
@@ -11,14 +12,7 @@ import (
 )
 
 type CreateResourcesEvent struct {
-	Region             string	`json:"region"`				// Region where cluster infra should be created
-	InfraID            string	`json:"infraID"`			// Infrastructure ID to use for AWS resources
-	AWSKey             string	`json:"awsAccessKeyID"`		// AWS Access Key ID for account to create resources in
-	AWSSecretKey       string	`json:"awsSecretKey"`		// AWS Secret Key for account to create resources in
 	Name               string	`json:"name"`				// A name for the hosted cluster
-	BaseDomain         string	`json:"baseDomain"`			// The ingress base domain for the cluster
-	OIDCStorageProviderS3BucketName string	`json:"oidcBucketName"`		// The name of the bucket in which the OIDC discovery document is stored
-	OIDCStorageProviderS3Region     string	`json:"oidcBucketRegion"`	// The region of the bucket in which the OIDC discovery document is stored
 }
 
 // The response is made up of outputs from the AWS infra and IAM hypershift commands
@@ -34,13 +28,13 @@ func createInfraResources(createResourcesEvent CreateResourcesEvent) (*cmd.Creat
 	log.Info("***** Create AWS infrastructure resources for a cluster")
 
 	createInfraOpts := cmd.CreateInfraOptions{
-		Region: 			createResourcesEvent.Region,		
+		Region: 			os.Getenv("region"),		
 		Name:   			createResourcesEvent.Name,
-		InfraID:			createResourcesEvent.InfraID,
-		AWSKey:				createResourcesEvent.AWSKey,
-		AWSSecretKey:		createResourcesEvent.AWSSecretKey,
+		InfraID:			os.Getenv("infraID"),
+		AWSKey:				os.Getenv("awsAccessKeyID"),
+		AWSSecretKey:		os.Getenv("awsSecretKey"),
 		AWSCredentialsFile:	"",
-		BaseDomain:			createResourcesEvent.BaseDomain,
+		BaseDomain:			os.Getenv("baseDomain"),
 	}
 
 	log.WithFields(log.Fields{
@@ -68,13 +62,13 @@ func createIAMResources(createResourcesEvent CreateResourcesEvent) (*cmd.CreateI
 	log.Info("***** Create AWS IAM resources")
 
 	createIAMOpts := cmd.CreateIAMOptions{
-		Region: 							createResourcesEvent.Region,
-		OIDCStorageProviderS3BucketName:	createResourcesEvent.OIDCStorageProviderS3BucketName,
-		OIDCStorageProviderS3Region: 		createResourcesEvent.OIDCStorageProviderS3Region,
-		InfraID:							createResourcesEvent.InfraID,
+		Region: 							os.Getenv("region"),
+		OIDCStorageProviderS3BucketName:	os.Getenv("oidcBucketName"),
+		OIDCStorageProviderS3Region: 		os.Getenv("oidcBucketRegion"),
+		InfraID:							os.Getenv("infraID"),
 		AWSCredentialsFile:					"",
-		AWSKey:								createResourcesEvent.AWSKey,
-		AWSSecretKey:						createResourcesEvent.AWSSecretKey,
+		AWSKey:								os.Getenv("awsAccessKeyID"),
+		AWSSecretKey:						os.Getenv("awsSecretKey"),
 		PublicZoneID:						createInfraOutput.PublicZoneID,		// The id of the cluster's public route53 zone
 		PrivateZoneID:						createInfraOutput.PrivateZoneID,	// The id of the cluster's private route53 zone
 		LocalZoneID: 						createInfraOutput.LocalZoneID,		// The id of the cluster's local route53 zone
@@ -104,33 +98,33 @@ func createIAMResources(createResourcesEvent CreateResourcesEvent) (*cmd.CreateI
 // Lambda event handler
 func HandleRequest(ctx context.Context, createResourcesEvent CreateResourcesEvent) (ResourcesResponse, error) {
 	// Validate event attributes
-	if (createResourcesEvent.AWSKey == "") {
+	if _, ok := os.LookupEnv("awsAccessKeyID"); !ok {
 		return ResourcesResponse{}, fmt.Errorf("missing AWS access key")
 	}
 	
-	if (createResourcesEvent.AWSSecretKey == "") {
+	if _, ok := os.LookupEnv("awsSecretKey"); !ok {
 		return ResourcesResponse{}, fmt.Errorf("missing AWS secret Key")
 	}
 	
-	if (createResourcesEvent.InfraID == "") {
+	if _, ok := os.LookupEnv("infraID"); !ok  {
 		return ResourcesResponse{}, fmt.Errorf("missing infraID")
+	}
+
+	if _, ok := os.LookupEnv("baseDomain"); !ok {
+		return ResourcesResponse{}, fmt.Errorf("missing baseDomain")
+	}
+
+	if _, ok := os.LookupEnv("oidcBucketName"); !ok {
+		return ResourcesResponse{}, fmt.Errorf("missing oidcBucketName")
+	}
+
+	if _, ok := os.LookupEnv("oidcBucketRegion"); !ok {
+		return ResourcesResponse{}, fmt.Errorf("missing oidcBucketRegion")
 	}
 
 	if (createResourcesEvent.Name == "") {
 		return ResourcesResponse{}, fmt.Errorf("missing cluster name")
-	}	
-
-	if (createResourcesEvent.BaseDomain == "") {
-		return ResourcesResponse{}, fmt.Errorf("missing baseDomain")
-	}
-
-	if (createResourcesEvent.OIDCStorageProviderS3BucketName == "") {
-		return ResourcesResponse{}, fmt.Errorf("missing oidcBucketName")
-	}
-
-	if (createResourcesEvent.OIDCStorageProviderS3Region == "") {
-		return ResourcesResponse{}, fmt.Errorf("missing oidcBucketRegion")
-	}	
+	}		
 	
 	// Note: infra must be created first as values from the infra output will be used for creating IAM resources
 	createInfraOutput, err := createInfraResources(createResourcesEvent)

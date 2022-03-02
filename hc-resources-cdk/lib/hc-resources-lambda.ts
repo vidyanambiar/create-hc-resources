@@ -16,20 +16,23 @@ export class HcResourcesLambda extends core.Construct {
         // Build the code and create the lambda
         const lambdaFn = new lambda.GoFunction(this, 'main', {
             entry: path.join(__dirname, '../../hc-resources-lambda'),
+            timeout: core.Duration.seconds(60),
+            environment: {
+                awsAccessKeyID: String(process.env.AWS_ACCESS_KEY_ID),
+                awsSecretKey: String(process.env.AWS_SECRET_KEY),
+                region: String(process.env.REGION),
+                infraID: String(process.env.INFRA_ID),
+                baseDomain: String(process.env.BASE_DOMAIN),
+                oidcBucketName: String(process.env.OIDC_BUCKET_NAME),
+                oidcBucketRegion: String(process.env.OIDC_BUCKET_REGION)                
+            }            
         });
 
         const stack = core.Stack.of(this)
 
         // Payload for Lambda
         const payload: string = JSON.stringify({
-            region: process.env.REGION,
-            infraID: process.env.INFRA_ID,
-            awsAccessKeyID: process.env.AWS_ACCESS_KEY_ID,
-            awsSecretKey: process.env.AWS_SECRET_KEY,
-            name: process.env.CLUSTER_NAME,
-            baseDomain: process.env.BASE_DOMAIN,
-            oidcBucketName: process.env.OIDC_BUCKET_NAME,
-            oidcBucketRegion: process.env.OIDC_BUCKET_REGION
+            name: process.env.CLUSTER_NAME
         })
 
         const payloadHashPrefix = createHash('md5').update(payload).digest('hex').substring(0, 6)
@@ -63,8 +66,14 @@ export class HcResourcesLambda extends core.Construct {
             role: customResourceFnRole
         })
 
-        this.response = this.customResource.getResponseField('Payload')
+        this.response = this.customResource.getResponseField('Payload')    
 
         this.function = lambdaFn
+
+        // create an Output
+        new core.CfnOutput(this, 'HostedClusterResourcesOutput', {
+            value: this.response,
+            description: 'The infra and IAM outputs for the hosted cluster',
+        });            
     }
 }
