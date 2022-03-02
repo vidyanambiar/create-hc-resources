@@ -74,6 +74,7 @@ export class HcResourcesLambda extends core.Construct {
             action: 'invoke',
             parameters: {
               FunctionName: lambdaFn.functionName,
+              Payload: payload
             },
             physicalResourceId: PhysicalResourceId.of(`${id}-AwsSdkCall-${lambdaFn.currentVersion.version + payloadHashPrefix}`)
           }
