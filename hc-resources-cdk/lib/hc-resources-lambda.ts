@@ -1,70 +1,37 @@
 import * as lambda from '@aws-cdk/aws-lambda-go';
 import * as path from 'path';
-import * as core from '@aws-cdk/core';
-import { AwsCustomResource, AwsCustomResourcePolicy, AwsSdkCall, PhysicalResourceId } from '@aws-cdk/custom-resources'
-import { PolicyStatement, Role, ServicePrincipal } from '@aws-cdk/aws-iam'
-import { createHash } from 'crypto'
-import { CfnParameter } from '@aws-cdk/core';
-
-export class HcResourcesLambda extends core.Construct {
+import { Construct, Stack, Duration, CfnOutput } from '@aws-cdk/core';
+import { AwsCustomResource, AwsCustomResourcePolicy, AwsSdkCall, PhysicalResourceId } from '@aws-cdk/custom-resources';
+import { PolicyStatement, Role, ServicePrincipal } from '@aws-cdk/aws-iam';
+import { createHash } from 'crypto';
+export class HcResourcesLambda extends Construct {
     public readonly response: string
     public readonly customResource: AwsCustomResource
     public readonly function: lambda.GoFunction
 
-    constructor(scope: core.Construct, id: string) {
+    constructor(scope: Construct, id: string, env: { [key: string]: string; }) {
         super(scope, id);
 
-        const stack = core.Stack.of(this)
-
-        // Parameters for the lambda function
-        const region = new CfnParameter(this, "region", {
-            type: "String",
-            description: "The region where cluster infra should be created"});
-        const infraID = new CfnParameter(this, "infraID", {
-            type: "String",
-            description: "Infrastructure ID to use for AWS resources"}); 
-        const awsAccessKeyID = new CfnParameter(this, "awsAccessKeyID", {
-            type: "String",
-            description: "AWS Access Key ID for account to create resources in"});
-        const awsSecretKey = new CfnParameter(this, "awsSecretKey", {
-            type: "String",
-            description: "AWS Secret Key for account to create resources in"});
-        const name = new CfnParameter(this, "name", {
-            type: "String",
-            description: "A name for the hosted cluster"}); 
-        const baseDomain = new CfnParameter(this, "baseDomain", {
-            type: "String",
-            description: "The ingress base domain for the cluster"});
-        const oidcBucketName = new CfnParameter(this, "oidcBucketName", {
-            type: "String",
-            description: "The name of the bucket in which the OIDC discovery document is stored"}); 
-        const oidcBucketRegion = new CfnParameter(this, "oidcBucketRegion", {
-            type: "String",
-            description: "The region of the bucket in which the OIDC discovery document is stored"});             
+        const stack = Stack.of(this)            
 
         // Build the code and create the lambda
         const lambdaFn = new lambda.GoFunction(this, 'main', {
             entry: path.join(__dirname, '../../hc-resources-lambda'),
-            environment: {
-                region: region.valueAsString,
-                infraID: infraID.valueAsString,
-                name: name.valueAsString,
-                baseDomain: baseDomain.valueAsString,
-                oidcBucketName: oidcBucketName.valueAsString,
-                oidcBucketRegion: oidcBucketRegion.valueAsString,
-                awsAccessKeyID: awsAccessKeyID.valueAsString,
-                infawsSecretKeyraID: awsSecretKey.valueAsString,                                                
-              },            
+            timeout: Duration.seconds(60),
+            functionName: "CreateHCResources",            
+            environment: env            
         });
+
+        console.log("env.region 👉 ", env.region);
 
         // Payload
         const payload: string = JSON.stringify({
-            region: region.valueAsString,
-            infraID: infraID.valueAsString,
-            name: name.valueAsString,
-            baseDomain: baseDomain.valueAsString,
-            oidcBucketName: oidcBucketName.valueAsString,
-            oidcBucketRegion: oidcBucketRegion.valueAsString,
+            region: env.region,
+            infraID: env.infraID,
+            name: env.name,
+            baseDomain: env.baseDomain,
+            oidcBucketName: env.oidcBucketName,
+            oidcBucketRegion: env.oidcBucketRegion,
         })
 
         const payloadHashPrefix = createHash('md5').update(payload).digest('hex').substring(0, 6)
@@ -85,7 +52,7 @@ export class HcResourcesLambda extends core.Construct {
           })
         customResourceFnRole.addToPolicy(
             new PolicyStatement({
-                resources: [`arn:aws:lambda:${stack.region}:${stack.account}:function:*${stack.stackName}*`],
+                resources: [`arn:aws:lambda:${stack.region}:${stack.account}:function:CreateHCResources*`],
                 actions: ['lambda:InvokeFunction']
             })
         )        
@@ -94,12 +61,18 @@ export class HcResourcesLambda extends core.Construct {
             policy: AwsCustomResourcePolicy.fromSdkCalls({ resources: AwsCustomResourcePolicy.ANY_RESOURCE }),
             onCreate: sdkCall,
             onUpdate: sdkCall,
-            timeout: core.Duration.minutes(10),
+            timeout: Duration.minutes(10),
             role: customResourceFnRole
         })
 
         this.response = this.customResource.getResponseField('Payload')
 
         this.function = lambdaFn
+
+        // create an Output
+        new CfnOutput(this, 'HostedClusterResourcesOutput', {
+            value: this.response,
+            description: 'The infra and IAM outputs for the hosted cluster',
+        });           
     }
 }
