@@ -1,7 +1,7 @@
 import * as cdk from '@aws-cdk/core';
 import * as hcResourcesLambda from './hc-resources-lambda';
 
-export class HcResourcesCdkStack extends cdk.Stack {
+export class HcResourcesEnvVarTest extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
