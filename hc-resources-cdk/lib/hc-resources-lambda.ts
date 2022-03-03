@@ -18,7 +18,7 @@ export class HcResourcesLambda extends Construct {
         const lambdaFn = new lambda.GoFunction(this, 'main', {
             entry: path.join(__dirname, '../../hc-resources-lambda'),
             timeout: Duration.seconds(60),
-            functionName: "CreateHCResources",            
+            functionName: "CreateHCResourcesWithParams",            
             environment: env            
         });
 
@@ -52,7 +52,7 @@ export class HcResourcesLambda extends Construct {
           })
         customResourceFnRole.addToPolicy(
             new PolicyStatement({
-                resources: [`arn:aws:lambda:${stack.region}:${stack.account}:function:CreateHCResources*`],
+                resources: [`arn:aws:lambda:${stack.region}:${stack.account}:function:CreateHCResourcesWithParams*`],
                 actions: ['lambda:InvokeFunction']
             })
         )        

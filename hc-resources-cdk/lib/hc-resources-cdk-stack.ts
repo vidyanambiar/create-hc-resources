@@ -1,7 +1,7 @@
 import { Stack, CfnParameter, Construct, StackProps } from '@aws-cdk/core';
 import * as hcResourcesLambda from './hc-resources-lambda';
 
-export class HcResourcesCdkStack extends Stack {
+export class HcResourcesParamsStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from '@aws-cdk/core';
-import { HcResourcesCdkStack } from '../lib/hc-resources-cdk-stack';
+import { HcResourcesParamsStack } from '../lib/hc-resources-cdk-stack';
 
 const app = new cdk.App();
-new HcResourcesCdkStack(app, 'HcResourcesCdkStack', {
+new HcResourcesParamsStack(app, 'HcResourcesParamsStack', {
   /* If you don't specify 'env', this stack will be environment-agnostic.
    * Account/Region-dependent features and context lookups will not work,
    * but a single synthesized template can be deployed anywhere. */
