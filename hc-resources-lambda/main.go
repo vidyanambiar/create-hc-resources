@@ -2,11 +2,17 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 
+	chiadapter "github.com/awslabs/aws-lambda-go-api-proxy/chi"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/render"
 	cmd "github.com/openshift/hypershift/cmd/infra/aws"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
@@ -101,8 +107,8 @@ func createIAMResources(createResourcesEvent CreateResourcesEvent) (*cmd.CreateI
 	}	
 }
 
-// Lambda event handler
-func HandleRequest(ctx context.Context, createResourcesEvent CreateResourcesEvent) (ResourcesResponse, error) {
+
+func HandleRequest(createResourcesEvent CreateResourcesEvent) (ResourcesResponse, error) {
 	// Validate event attributes
 	if (createResourcesEvent.AWSKey == "") {
 		return ResourcesResponse{}, fmt.Errorf("missing AWS access key")
@@ -154,7 +160,42 @@ func HandleRequest(ctx context.Context, createResourcesEvent CreateResourcesEven
 	return outputResponse, nil
 }
 
+
+var chiLambda *chiadapter.ChiLambda
+
+// Lambda event handler
+func handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	return chiLambda.ProxyWithContext(ctx, req)
+}
+
+// apiResponse is the response to the API.
+type apiResponse struct {
+	Status int `json:"status_code,omitempty"`
+	URL string `json:"url,omitempty"`
+	Body ResourcesResponse `json:"resourcesResponse,omitempty"`
+}
+
+// Render is used by go-chi-render to render the JSON response.
+func (a apiResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	render.Status(r, a.Status)
+	return nil
+}
+
 func main() {
-	// Execute the Lambda function
-	lambda.Start(HandleRequest)
+	// init go-chi router
+	r := chi.NewRouter()
+	r.HandleFunc("/*", func(w http.ResponseWriter, r *http.Request) {
+		var createResourcesEvent CreateResourcesEvent
+		_ = json.NewDecoder(r.Body).Decode(&createResourcesEvent)
+		response, _ := HandleRequest(createResourcesEvent)
+
+		_ = render.Render(w, r, &apiResponse{
+			Status: 200,
+			URL: r.URL.String(),
+			Body: response,
+		})
+	})
+
+	// start the lambda with a context
+	lambda.StartWithContext(context.Background(), handler)
 }
