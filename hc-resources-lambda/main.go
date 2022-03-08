@@ -95,15 +95,15 @@ func createIAMResources() (*cmd.CreateIAMOutput, error) {
 func HandleRequest(ctx context.Context) (ResourcesResponse, error) {
 	// Validate event attributes
 	if _, ok := os.LookupEnv("awsAccessKeyID"); !ok {
-		return ResourcesResponse{}, fmt.Errorf("missing AWS access key")
+		return ResourcesResponse{}, fmt.Errorf("missing AWS access key ID")
 	}
 	
 	if _, ok := os.LookupEnv("awsSecretKey"); !ok {
-		return ResourcesResponse{}, fmt.Errorf("missing AWS secret Key")
+		return ResourcesResponse{}, fmt.Errorf("missing AWS secret key")
 	}
 	
 	if _, ok := os.LookupEnv("infraID"); !ok  {
-		return ResourcesResponse{}, fmt.Errorf("missing infraID")
+		return ResourcesResponse{}, fmt.Errorf("missing AWS infraID:")
 	}
 
 	if _, ok := os.LookupEnv("baseDomain"); !ok {

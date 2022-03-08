@@ -39,7 +39,7 @@ export class HcResourcesParamsStack extends Stack {
       oidcBucketName: oidcBucketName.valueAsString,
       oidcBucketRegion: oidcBucketRegion.valueAsString,
       awsAccessKeyID: awsAccessKeyID.valueAsString,
-      infawsSecretKeyraID: awsSecretKey.valueAsString,                                                
+      awsSecretKey: awsSecretKey.valueAsString,                                                
     };
 
     // Build the code and create the lambda

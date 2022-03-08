@@ -12,7 +12,9 @@ export class HcResourcesLambda extends Construct {
     constructor(scope: Construct, id: string, env: { [key: string]: string; }) {
         super(scope, id);
 
-        const stack = Stack.of(this)            
+        const stack = Stack.of(this)     
+        
+        console.log("env: ", env);
 
         // Build the code and create the lambda
         const lambdaFn = new lambda.GoFunction(this, 'main', {
