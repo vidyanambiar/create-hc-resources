@@ -2,13 +2,17 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 
+	"github.com/fatih/structs"
 	cmd "github.com/openshift/hypershift/cmd/infra/aws"
 	log "github.com/sirupsen/logrus"
 
+	cfn "github.com/aws/aws-lambda-go/cfn"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/google/uuid"
 )
 
 // The response is made up of outputs from the AWS infra and IAM hypershift commands
@@ -92,34 +96,65 @@ func createIAMResources() (*cmd.CreateIAMOutput, error) {
 }
 
 // Lambda event handler
-func HandleRequest(ctx context.Context) (ResourcesResponse, error) {
+func HandleRequest (ctx context.Context, event cfn.Event) {
+
+	id := uuid.New()
+
+	r := cfn.NewResponse(&cfn.Event{
+		RequestID:         event.RequestID,
+		ResponseURL:       event.ResponseURL,
+		LogicalResourceID: event.LogicalResourceID,
+		StackID:           event.StackID,
+	})
+
+	r.PhysicalResourceID = "MyCustomResource_" + id.String()
+
+	if (event.RequestType != "Create") {
+		r.Status = cfn.StatusFailed
+		r.Reason = fmt.Sprintf("Resources are not created on a %v event", event.RequestType)
+	}
+
 	// Validate event attributes
 	if _, ok := os.LookupEnv("awsAccessKeyID"); !ok {
-		return ResourcesResponse{}, fmt.Errorf("missing AWS access key")
+		r.Status = cfn.StatusFailed
+		r.Reason = "missing AWS access key ID"
+		r.Send()
 	}
 	
 	if _, ok := os.LookupEnv("awsSecretKey"); !ok {
-		return ResourcesResponse{}, fmt.Errorf("missing AWS secret Key")
+		r.Status = cfn.StatusFailed
+		r.Reason = "missing AWS secret Key"
+		r.Send()
 	}
 	
 	if _, ok := os.LookupEnv("infraID"); !ok  {
-		return ResourcesResponse{}, fmt.Errorf("missing infraID")
+		r.Status = cfn.StatusFailed
+		r.Reason = "missing infraID"
+		r.Send()
 	}
 
 	if _, ok := os.LookupEnv("baseDomain"); !ok {
-		return ResourcesResponse{}, fmt.Errorf("missing baseDomain")
+		r.Status = cfn.StatusFailed
+		r.Reason = "missing baseDomain"
+		r.Send()
 	}
 
 	if _, ok := os.LookupEnv("oidcBucketName"); !ok {
-		return ResourcesResponse{}, fmt.Errorf("missing oidcBucketName")
+		r.Status = cfn.StatusFailed
+		r.Reason = "missing oidcBucketName"
+		r.Send()
 	}
 
 	if _, ok := os.LookupEnv("oidcBucketRegion"); !ok {
-		return ResourcesResponse{}, fmt.Errorf("missing oidcBucketRegion")
+		r.Status = cfn.StatusFailed
+		r.Reason = "missing oidcBucketRegion"
+		r.Send()
 	}
 
 	if _, ok := os.LookupEnv("name"); !ok {
-		return ResourcesResponse{}, fmt.Errorf("missing cluster name")
+		r.Status = cfn.StatusFailed
+		r.Reason = "missing cluster name"
+		r.Send()
 	}		
 	
 	// Note: infra must be created first as values from the infra output will be used for creating IAM resources
@@ -127,21 +162,51 @@ func HandleRequest(ctx context.Context) (ResourcesResponse, error) {
 
 	outputResponse := ResourcesResponse{}
 
+	var dataMap map[string]interface{}
+	data, _ := json.Marshal(outputResponse)
+	json.Unmarshal(data, &dataMap)
+
 	if err != nil {
-		return outputResponse, err
+		r.Status = cfn.StatusFailed
+		r.Reason = "error creating infra resources"
+		r.Data = dataMap
+		r.Send()
 	} else {
 		outputResponse.InfraOutput = createInfraOutput
 	}
 
+	data, _ = json.Marshal(outputResponse)
+	json.Unmarshal(data, &dataMap)	
+	r.Data = dataMap
+
 	createIAMOutput, err := createIAMResources()
 
 	if err != nil {
-		return outputResponse, err
+		r.Status = cfn.StatusFailed
+		r.Reason = "error creating iam resources"
+		r.Data = structs.Map(outputResponse)
+		r.Send()
 	} else {
 		outputResponse.IAMOutput = createIAMOutput
 	}
+
+	data, _ = json.Marshal(outputResponse)
+	json.Unmarshal(data, &dataMap)	
+	r.Data = dataMap
+
+	r.Status = cfn.StatusSuccess
+
+
+	log.WithFields(log.Fields{
+		"RequestID":         	r.RequestID,
+		"LogicalResourceID":             r.LogicalResourceID,
+		"StackID":          r.StackID,
+		"PhysicalResourceID":      	r.PhysicalResourceID,
+	}).Info("Response values:")	
+
+	r.Send()
 	
-	return outputResponse, nil
+	// return outputResponse, nil
 }
 
 func main() {

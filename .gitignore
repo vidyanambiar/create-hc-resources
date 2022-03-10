@@ -3,3 +3,6 @@
 create-hc-resources
 *-output.js
 env.list
+function-cfn.zip
+function.zip
+main
