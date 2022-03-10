@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/fatih/structs"
 	cmd "github.com/openshift/hypershift/cmd/infra/aws"
 	log "github.com/sirupsen/logrus"
 
@@ -162,47 +161,41 @@ func HandleRequest (ctx context.Context, event cfn.Event) {
 
 	outputResponse := ResourcesResponse{}
 
-	var dataMap map[string]interface{}
 	data, _ := json.Marshal(outputResponse)
-	json.Unmarshal(data, &dataMap)
+	finalOutput := map[string]interface{}{ "Payload": string(data) }
 
 	if err != nil {
 		r.Status = cfn.StatusFailed
 		r.Reason = "error creating infra resources"
-		r.Data = dataMap
+		r.Data = finalOutput
 		r.Send()
 	} else {
 		outputResponse.InfraOutput = createInfraOutput
 	}
 
 	data, _ = json.Marshal(outputResponse)
-	json.Unmarshal(data, &dataMap)	
-	r.Data = dataMap
+	finalOutput = map[string]interface{}{ "Payload": string(data) }
+	r.Data = finalOutput
 
 	createIAMOutput, err := createIAMResources()
 
 	if err != nil {
 		r.Status = cfn.StatusFailed
 		r.Reason = "error creating iam resources"
-		r.Data = structs.Map(outputResponse)
+		r.Data = finalOutput
 		r.Send()
 	} else {
 		outputResponse.IAMOutput = createIAMOutput
 	}
 
 	data, _ = json.Marshal(outputResponse)
-	json.Unmarshal(data, &dataMap)	
-	r.Data = dataMap
+	finalOutput = map[string]interface{}{ "Payload": string(data) }
+	r.Data = finalOutput
 
 	r.Status = cfn.StatusSuccess
 
 
-	log.WithFields(log.Fields{
-		"RequestID":         	r.RequestID,
-		"LogicalResourceID":             r.LogicalResourceID,
-		"StackID":          r.StackID,
-		"PhysicalResourceID":      	r.PhysicalResourceID,
-	}).Info("Response values:")	
+	log.WithFields(log.Fields(r.Data)).Info("Response values:")	
 
 	r.Send()
 	
